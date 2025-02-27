@@ -10,7 +10,7 @@ def main():
     vehicle_counter = VehicleCounter()
     
     # Video input setup
-    video_path = 'C:/Users/Piyush/Desktop/Personal Work/DEKHO/data/test2.mp4'
+    video_path = 'C:/Users/Piyush/Desktop/Personal Work/DEKHO/data/test3.mp4'
     print(f"Video path: {video_path}")  # Print the video path for verification
 
     if not os.path.exists(video_path):

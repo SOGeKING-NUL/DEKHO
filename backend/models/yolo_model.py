@@ -5,7 +5,7 @@ import numpy as np
 
 class VehicleCounter:
     def __init__(self):
-        self.model=YOLO('yolov8n.pt') #pretrained model
+        self.model=YOLO('yolov8x.pt') #pretrained model
         self.tracker=ByteTrack() #tracker added
         self.allowed_class_ids={
             'car': 2,
