@@ -48,19 +48,35 @@ def main():
         cv2.line(frame, (0, line_y), (frame.shape[1], line_y), (0, 255, 0), 2)
         
         # 2. Display counts
-        cv2.putText(frame, f"Northbound: {line_counter.counts['north']}", 
+        cv2.putText(frame, f"goingNorth: {line_counter.counts['north']}", 
                     (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        cv2.putText(frame, f"Southbound: {line_counter.counts['south']}", 
+        
+        cv2.putText(frame, f"goingSOUTH: {line_counter.counts['south']}", 
                     (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
         
         # 3. Show tracking information
         for track in tracks:
-            #extracting only the required information
-            x1, x2, y1, y2, track_id = track[0:5].astype(int)
-            class_id=int(track[6]) if len(track)>6 else 0
+            if len(track)<5:
+                continue
 
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, f"ID: {track_id}", (x1, y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            x1=int(track[0])
+            y1=int(track[1])
+            x2=int(track[2])
+            y2=int(track[3])
+            track_id=int(track[4])
+            
+            #calculating centre
+            x_center = (x1 + x2) // 2
+            y_center = (y1 + y2) // 2
+
+            #drawing centre point
+            center_color = (0, 255, 0) if y_center <= line_y else (0, 0, 255)
+            cv2.circle(frame, (x_center, y_center), 5, center_color, -1)
+            cv2.circle(frame, (x_center, y_center), 5, center_color, -1)
+
+            #draw track id and position
+            cv2.putText(frame, f"{track_id}: y={y_center}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+
         
         # 4. Show FPS
         fps = cap.get(cv2.CAP_PROP_FPS)

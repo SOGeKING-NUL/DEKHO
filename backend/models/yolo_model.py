@@ -41,16 +41,17 @@ class VehicleCounter:
             class_name = results[0].names[class_id]
             
             if class_name in self.allowed_class_ids:
+                # Get absolute coordinates directly from xyxy
                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                img_height, img_width = img_shape[:2]
-
+                conf = box.conf.item()
+            
                 detections.append([
-                    x1 * img_width,   # Convert to absolute coordinates
-                    y1 * img_height,  # Convert to absolute coordinates
-                    x2 * img_width,   # Convert to absolute coordinates
-                    y2 * img_height,  # Convert to absolute coordinates
-                    box.conf.item(),   # Confidence score
-                    class_id          # Class ID
+                    x1,  # Already absolute coordinates
+                    y1,  # No need to multiply
+                    x2, 
+                    y2, 
+                    conf, 
+                    class_id
                 ])
-        
+    
         return np.array(detections) if detections else np.empty((0, 6))
