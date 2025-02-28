@@ -1,23 +1,39 @@
 import cv2
 import numpy as np
 import random
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 class VirtualIntersection:
     def __init__(self):
         self.width = 800
         self.height = 600
         self.vehicles = []
-        self.emergency_vehicles = []  # ✅ Add this line
+        self.emergency_vehicles = []
         self.spawn_rates = {'north': 0.05, 'south': 0.05, 'east': 0.03, 'west': 0.03}
         self.light_states = {'ns': 'green', 'ew': 'red'}
-        self.wait_times = {'north': 0, 'south': 0, 'east': 0, 'west': 0}
+        self.green_timer = 100
+        self.traffic_lights = {
+            'north': True if self.light_states['ns'] == 'green' else False,
+            'south': True if self.light_states['ns'] == 'green' else False,
+            'east': True if self.light_states['ew'] == 'green' else False,
+            'west': True if self.light_states['ew'] == 'green' else False
+        }
     
     def _change_lights(self, action):
-        """Update traffic lights based on RL action"""
-        if action == 0:  # North-South green
-            self.light_states = {'ns': 'green', 'ew': 'red'}
-        elif action == 1:  # East-West green
-            self.light_states = {'ns': 'red', 'ew': 'green'}
+        if self.green_timer <= 0:
+            if action == 0:
+                self.light_states = {'ns': 'green', 'ew': 'red'}
+            elif action == 1:
+                self.light_states = {'ns': 'red', 'ew': 'green'}
+            self.green_timer = 100
+        self.traffic_lights.update({
+            'north': self.light_states['ns'] == 'green',
+            'south': self.light_states['ns'] == 'green',
+            'east': self.light_states['ew'] == 'green',
+            'west': self.light_states['ew'] == 'green'
+        })
+
 
     def _spawn_vehicles(self):
         for direction in ['north', 'south', 'east', 'west']:
@@ -34,31 +50,46 @@ class VirtualIntersection:
 
 
     def _move_vehicles(self):
+        """Move vehicles based on traffic light states and update waiting times."""
+
+        # Reset waiting times before counting
+        self.wait_times = {'north': 0, 'south': 0, 'east': 0, 'west': 0}
+
         to_remove = []
+
         for i, vehicle in enumerate(self.vehicles):
             x, y = vehicle['pos']
-            can_move = self._can_move(vehicle['dir'])
+            direction = vehicle['dir']
+            is_emergency = vehicle.get('emergency', False)
 
-            if can_move:
-                if vehicle['dir'] == 'north':
-                    vehicle['pos'] = (x, y - 2)
-                elif vehicle['dir'] == 'south':
-                    vehicle['pos'] = (x, y + 2)
-                elif vehicle['dir'] == 'east':
-                    vehicle['pos'] = (x + 2, y)
-                elif vehicle['dir'] == 'west':
-                    vehicle['pos'] = (x - 2, y)
-                vehicle['waiting'] = 0
+            # Emergency vehicles always move, regardless of light
+            if is_emergency or self._can_move(direction):
+                speed = vehicle.get('speed', 2)  # Default speed = 2
+
+                if direction == 'north':
+                    vehicle['pos'] = (x, y - speed)
+                elif direction == 'south':
+                    vehicle['pos'] = (x, y + speed)
+                elif direction == 'east':
+                    vehicle['pos'] = (x + speed, y)
+                elif direction == 'west':
+                    vehicle['pos'] = (x - speed, y)
+
+                vehicle['waiting'] = 0  # Reset waiting time on movement
             else:
                 vehicle['waiting'] += 1
+                self.wait_times[direction] += 1  # Accumulate waiting time per direction
 
+            # Mark vehicle for removal if out of bounds
             if not self._in_bounds(vehicle['pos']):
                 to_remove.append(i)
-                if vehicle in self.emergency_vehicles:  # ✅ Remove emergency vehicles properly
-                    self.emergency_vehicles.remove(vehicle)
 
+        # Remove vehicles safely in reverse order to avoid index shift
         for i in reversed(to_remove):
             del self.vehicles[i]
+        
+
+
 
     def _can_move(self, direction):
         """Check if vehicle can move based on traffic lights"""
@@ -69,10 +100,9 @@ class VirtualIntersection:
     def _calculate_reward(self):
         """Calculate reward for RL agent"""
         reward = 0
-        # Penalize waiting vehicles
-        reward -= sum(v['waiting'] for v in self.vehicles) * 0.1
-        # Reward vehicles that exited
-        reward += len(self.emergency_vehicles) * 10
+        # Reward reducing waiting time
+        reward += sum(v['waiting'] for v in self.vehicles if v['waiting'] == 0) * 2
+        reward -= sum(v['waiting'] for v in self.vehicles) * 0.1  # Penalize waiting vehicles
         return reward
 
     def _get_spawn_position(self, direction):
@@ -117,68 +147,33 @@ class VirtualIntersection:
         }
         return counts
     
-    def render(self):
-        # Create blank canvas
-        canvas = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-    
-        # Draw roads
-        cv2.line(canvas, (self.width//2 - 100, 0), (self.width//2 - 100, self.height), 
-                (200, 200, 200), 300)  # Vertical road (NS)
-        cv2.line(canvas, (0, self.height//2 - 100), (self.width, self.height//2 - 100), 
-                (200, 200, 200), 300)  # Horizontal road (EW)
-    
-        # Draw intersection area
-        cv2.rectangle(canvas, 
-                    (self.width//2 - 100, self.height//2 - 100),
-                    (self.width//2 + 100, self.height//2 + 100),
-                    (100, 100, 100), -1)
-    
-        # Draw traffic lights
-        light_size = 20
-        # North-South lights
-        ns_color = (0, 255, 0) if self.light_states['ns'] == 'green' else (0, 0, 255)
-        cv2.circle(canvas, (self.width//2 - 120, self.height//2), light_size, ns_color, -1)
-        cv2.circle(canvas, (self.width//2 + 120, self.height//2), light_size, ns_color, -1)
-    
-        # East-West lights
-        ew_color = (0, 255, 0) if self.light_states['ew'] == 'green' else (0, 0, 255)
-        cv2.circle(canvas, (self.width//2, self.height//2 - 120), light_size, ew_color, -1)
-        cv2.circle(canvas, (self.width//2, self.height//2 + 120), light_size, ew_color, -1)
-    
-        # Draw vehicles
+    def _draw_intersection(self):
+        plt.clf()
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.set_xlim(-50, 50)
+        ax.set_ylim(-50, 50)
+        ax.set_facecolor('black')
+        
+        ax.add_patch(patches.Rectangle((-50, -10), 100, 20, facecolor='#333333'))
+        ax.add_patch(patches.Rectangle((-10, -50), 20, 100, facecolor='#333333'))
+        ax.add_patch(patches.Rectangle((-10, -10), 20, 20, facecolor='#444444'))
+
+        light_positions = {'north': (0, 40), 'south': (0, -40), 'east': (40, 0), 'west': (-40, 0)}
+        for direction, pos in light_positions.items():
+            color = 'green' if self.traffic_lights[direction] else 'red'
+            ax.add_patch(patches.Circle(pos, 5, color=color, alpha=0.8, lw=2, ec='yellow'))
+
         for vehicle in self.vehicles:
-            x, y = map(int, vehicle['pos'])
-            size = 8
-            # Draw different shapes for directions
-            if vehicle['dir'] in ['north', 'south']:
-                cv2.rectangle(canvas, 
-                            (x - size, y - size),
-                            (x + size, y + size),
-                            vehicle['color'], -1)
-            else:
-                cv2.circle(canvas, (x, y), size, vehicle['color'], -1)
-    
-        # Add info overlay
-        cv2.putText(canvas, f"NS: {self.light_states['ns'].upper()}", (20, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        cv2.putText(canvas, f"EW: {self.light_states['ew'].upper()}", (20, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        cv2.putText(canvas, f"Vehicles: {len(self.vehicles)}", (20, 90),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-    
-        # Display waiting times
-        y_offset = 120
-        for dir, time in self.wait_times.items():
-            cv2.putText(canvas, f"{dir.capitalize()} wait: {time}s", (20, y_offset),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 0), 1)
-            y_offset += 30
-    
-        # Show simulation
-        cv2.imshow("Traffic Intersection Simulation", canvas)
-        key = cv2.waitKey(30)
-    
-        # Emergency vehicle spawn on spacebar
-        if key == 32:  # Spacebar
-            self._spawn_emergency_vehicle()
-    
-        return key
+            x, y = vehicle['pos']
+            direction = vehicle['dir']
+            color = '#00FFFF' if vehicle.get('emergency', False) else '#FF5733'
+            width, height = (6, 12) if direction in ['north', 'south'] else (12, 6)
+            ax.add_patch(patches.FancyBboxPatch(
+                (x - width / 2, y - height / 2), width, height,
+                facecolor=color, edgecolor='white', boxstyle='round,pad=0.1'
+            ))
+        
+        ax.text(-48, 42, f'Vehicles: {len(self.vehicles)}', fontsize=10, color='white', weight='bold')
+        plt.axis("off")
+        plt.pause(0.1)  # Allow animation effect
+        plt.show(block=False)
