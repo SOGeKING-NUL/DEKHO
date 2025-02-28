@@ -1,1 +1,4 @@
 node_modules
+backend/yolov8x.pt 
+backend/yolov8l.pt 
+backend/data/test3.mp4" 
