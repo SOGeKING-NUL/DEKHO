@@ -1,46 +1,97 @@
 import numpy as np
-import json
-from collections import deque
+import os
 
 class TrafficRLAgent:
-    def __init__(self, state_size=5, action_size=2):
-
-        # State: [north, south, east, west] counts binned (0-4) + emergency flag
-        self.state_size = 5
-        self.action_size = 2  # 0=NS-green, 1=EW-green
+    def __init__(self, learning_rate=0.1, discount_factor=0.95, exploration_rate=0.2):
+        self.alpha = learning_rate
+        self.gamma = discount_factor
+        self.epsilon = exploration_rate
         
-        # Q-table dimensions: (north_bins, south_bins, east_bins, west_bins, emergency_flag, actions)
-        self.q_table = np.zeros((5, 5, 5, 5, 2, self.action_size))
-        self.learning_rate = 0.1
-        self.discount_factor = 0.95
-        self.epsilon = 0.1
-        self.bin_size = 5  #Vehicles per bin
+        # State space definition:
+        # More simplified state space to match existing Q-table
+        # - Number of cars in each direction (0-5, >5)
+        # - Current light state (0, 1)
+        self.state_space_size = (6, 6, 6, 6, 2)
+        self.action_space_size = 2  # 0: NS Green, 1: EW Green
         
-    def get_state(self, counts):
-        """Convert counts to discrete state bins (0-4)"""
-        return (
-            min(counts.get('north', 0) // self.bin_size, 4),
-            min(counts.get('south', 0) // self.bin_size, 4),
-            min(counts.get('east', 0) // self.bin_size, 4),
-            min(counts.get('west', 0) // self.bin_size, 4),
-            1 if counts.get('emergency', False) else 0
-        )
+        # Initialize or load Q-table
+        if os.path.exists('q_table.npy'):
+            try:
+                self.q_table = np.load('q_table.npy')
+                print(f"Loaded existing Q-table with shape: {self.q_table.shape}")
+                
+                # Check if dimensions match our current definition
+                if len(self.q_table.shape) != len(self.state_space_size) + 1:
+                    print("Q-table dimensions mismatch. Creating a new Q-table...")
+                    self.q_table = np.zeros(self.state_space_size + (self.action_space_size,))
+            except Exception as e:
+                print(f"Error loading Q-table: {e}")
+                self.q_table = np.zeros(self.state_space_size + (self.action_space_size,))
+        else:
+            self.q_table = np.zeros(self.state_space_size + (self.action_space_size,))
+            print("Created new Q-table.")
+        
+        self.episode_steps = 0
+    
+    def get_state(self, env_state):
+        """Convert environment state dict to a tuple for Q-table lookup"""
+        # Convert vehicle counts to discrete bins
+        north_vehicles = min(5, env_state.get('north', 0))
+        south_vehicles = min(5, env_state.get('south', 0))
+        east_vehicles = min(5, env_state.get('east', 0))
+        west_vehicles = min(5, env_state.get('west', 0))
+        
+        # Current light state
+        light_ns = 1 if env_state.get('light_ns', 0) == 1 else 0
+        
+        # Return only the dimensions that match our Q-table
+        return (north_vehicles, south_vehicles, east_vehicles, west_vehicles, light_ns)
     
     def choose_action(self, state):
-        if np.random.rand() <= self.epsilon:
-            return np.random.choice(self.action_size)
-        return np.argmax(self.q_table[state])
+        """Select action using epsilon-greedy policy"""
+        self.episode_steps += 1
+        
+        # Decrease exploration rate over time
+        if self.episode_steps % 1000 == 0:
+            self.epsilon = max(0.05, self.epsilon * 0.95)
+        
+        try:
+            # Explore: choose random action
+            if np.random.random() < self.epsilon:
+                return np.random.randint(0, self.action_space_size)
+            
+            # Exploit: choose best action
+            return np.argmax(self.q_table[state])
+        except IndexError:
+            print(f"Index error with state: {state}")
+            return np.random.randint(0, self.action_space_size)
     
     def update_model(self, state, action, reward, next_state):
-        current_q = self.q_table[state + (action,)]
-        max_future_q = np.max(self.q_table[next_state])
-        
-        new_q = (1 - self.learning_rate) * current_q + \
-                self.learning_rate * (reward + self.discount_factor * max_future_q)
-        self.q_table[state + (action,)] = new_q
-        
-    def save_model(self, path):
-        np.save(path, self.q_table)
-        
-    def load_model(self, path):
-        self.q_table = np.load(path)
+        """Update Q-table using Q-learning algorithm"""
+        try:
+            # Current Q-value
+            current_q = self.q_table[state + (action,)]
+            
+            # Maximum Q-value for next state
+            max_next_q = np.max(self.q_table[next_state])
+            
+            # Q-learning update formula
+            new_q = current_q + self.alpha * (reward + self.gamma * max_next_q - current_q)
+            
+            # Update Q-table
+            self.q_table[state + (action,)] = new_q
+        except IndexError as e:
+            print(f"Error updating Q-table: {e}")
+    
+    def save_model(self, filepath='q_table.npy'):
+        """Save Q-table to file"""
+        np.save(filepath, self.q_table)
+        print(f"Model saved to {filepath}")
+    
+    def load_model(self, filepath='q_table.npy'):
+        """Load Q-table from file"""
+        if os.path.exists(filepath):
+            self.q_table = np.load(filepath)
+            print(f"Model loaded from {filepath}")
+            return True
+        return False
