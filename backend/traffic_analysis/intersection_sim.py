@@ -352,20 +352,20 @@ class VirtualIntersection:
 
     def _get_state(self):
         """Get the current state of the simulation"""
-        # Count vehicles in each direction
+        # Count vehicles in each direction, capped at 4 to match Q-table
         counts = {
-            'north': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'north'),
-            'south': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'south'),
-            'east': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'east'),
-            'west': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'west')
+            'north': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'north')),
+            'south': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'south')),
+            'east': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'east')),
+            'west': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'west'))
         }
         
-        # Also count emergency vehicles
+        # Also count emergency vehicles (capped at 4 for consistency, though not used in Q-table)
         emergency_counts = {
-            'north': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'north' and v.get('emergency', False)),
-            'south': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'south' and v.get('emergency', False)),
-            'east': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'east' and v.get('emergency', False)),
-            'west': sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'west' and v.get('emergency', False))
+            'north': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'north' and v.get('emergency', False))),
+            'south': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'south' and v.get('emergency', False))),
+            'east': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'east' and v.get('emergency', False))),
+            'west': min(4, sum(1 for v in self.vehicles if isinstance(v, dict) and v['dir'] == 'west' and v.get('emergency', False)))
         }
         
         counts.update({'emergency_' + k: v for k, v in emergency_counts.items()})

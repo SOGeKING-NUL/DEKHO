@@ -35,16 +35,16 @@ class TrafficRLAgent:
     
     def get_state(self, env_state):
         """Convert environment state dict to a tuple for Q-table lookup"""
-        # Convert vehicle counts to discrete bins
-        north_vehicles = min(5, env_state.get('north', 0))
-        south_vehicles = min(5, env_state.get('south', 0))
-        east_vehicles = min(5, env_state.get('east', 0))
-        west_vehicles = min(5, env_state.get('west', 0))
+        # Convert vehicle counts to discrete bins (0-4)
+        north_vehicles = min(4, env_state.get('north', 0))  # Changed from min(5, ...) to min(4, ...)
+        south_vehicles = min(4, env_state.get('south', 0))  # Changed from min(5, ...) to min(4, ...)
+        east_vehicles = min(4, env_state.get('east', 0))    # Changed from min(5, ...) to min(4, ...)
+        west_vehicles = min(4, env_state.get('west', 0))    # Changed from min(5, ...) to min(4, ...)
         
         # Current light state
         light_ns = 1 if env_state.get('light_ns', 0) == 1 else 0
         
-        # Return only the dimensions that match our Q-table
+        # Return state tuple
         return (north_vehicles, south_vehicles, east_vehicles, west_vehicles, light_ns)
     
     def choose_action(self, state):
