@@ -1,7 +1,7 @@
-# main.py
 import cv2
 import numpy as np
 import os
+import screeninfo  # To get screen resolution
 
 # Import only what's needed
 try:
@@ -22,27 +22,18 @@ def main():
         print(f"Error initializing vehicle detection model: {e}")
         return
     
-    # Video setup
-    # video_path = 'C:/Users/Piyush/Desktop/Personal Work/DEKHO/backend/data/test1.mp4'
-    # print(f"Opening video: {video_path}")
-    
-    # if not os.path.exists(video_path):
-    #     print("Error: Video file does not exist")
-    #     return
-    
-    # cap = cv2.VideoCapture(video_path)
-    # if not cap.isOpened():
-    #     print("Error: Could not open video")
-    #     return
-
     # Webcam setup
-    webcam_index = 1  # Use 0 for the default webcam; change if needed (e.g., 1 for a second camera)
+    webcam_index = 1  # Use 0 for the default webcam; change if needed
     print(f"Opening webcam with index: {webcam_index}")
     
     cap = cv2.VideoCapture(webcam_index)
     if not cap.isOpened():
         print("Error: Could not open webcam")
         return
+    
+    # Get screen resolution
+    screen = screeninfo.get_monitors()[0]
+    screen_width, screen_height = screen.width, screen.height
     
     # Get the first frame to set up ROI
     ret, frame = cap.read()
@@ -56,10 +47,10 @@ def main():
     
     # Define ROI - modify these coordinates based on your area of interest
     roi_points = [
-        (int(frame_width * 0.2), int(frame_height * 0.4)),  # Top-left
-        (int(frame_width * 0.8), int(frame_height * 0.4)),  # Top-right
-        (int(frame_width * 0.8), int(frame_height * 0.9)),  # Bottom-right
-        (int(frame_width * 0.2), int(frame_height * 0.9))   # Bottom-left
+        (int(frame_width * 0.2), int(frame_height * 0.4)),
+        (int(frame_width * 0.8), int(frame_height * 0.4)),
+        (int(frame_width * 0.8), int(frame_height * 0.9)),
+        (int(frame_width * 0.2), int(frame_height * 0.9))
     ]
     
     # Initialize area counter
@@ -69,6 +60,10 @@ def main():
     # Reset video to beginning
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     
+    # Set window to fullscreen
+    cv2.namedWindow('Traffic Density Monitor', cv2.WND_PROP_FULLSCREEN)
+    cv2.setWindowProperty('Traffic Density Monitor', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    
     # Main processing loop
     frame_count = 0
     try:
@@ -76,17 +71,18 @@ def main():
             ret, frame = cap.read()
             if not ret:
                 break
-                
+            
             frame_count += 1
-            if frame_count % 10 == 0:  # Status update every 10 frames
+            if frame_count % 10 == 0:
                 print(f"Processing frame {frame_count}")
             
-            # Process frame for vehicle detection and tracking
+            # Resize frame to fit screen resolution
+            frame = cv2.resize(frame, (screen_width, screen_height))
+            
             try:
                 tracks = vehicle_counter.process_frame(frame)
             except Exception as e:
                 print(f"Error processing frame: {e}")
-                # Draw ROI even if detection fails
                 area_counter.draw_visualization(frame)
                 cv2.imshow('Traffic Density Monitor', frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -99,19 +95,15 @@ def main():
             # Draw visualizations
             area_counter.draw_visualization(frame)
             
-            # Draw bounding boxes for vehicles in ROI
             for track in tracks:
                 if len(track) < 5:
                     continue
-                    
+                
                 try:
-                    x1, y1, x2, y2 = map(int, track[0:4])
+                    x1, y1, x2, y2 = map(int, track[:4])
                     track_id = int(track[4])
-                    
                     center_x = (x1 + x2) // 2
                     center_y = (y1 + y2) // 2
-                    
-                    # Different color for vehicles in ROI
                     in_roi = area_counter.is_in_roi((center_x, center_y))
                     color = (0, 255, 0) if in_roi else (0, 0, 255)
                     
@@ -119,10 +111,9 @@ def main():
                     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                     
                     # Draw ID
-                    cv2.putText(frame, f"{track_id}", (x1, y1-5), 
+                    cv2.putText(frame, f"{track_id}", (x1, y1-5),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                except Exception as e:
-                    # Skip problematic tracks
+                except Exception:
                     continue
             
             # Display statistics
@@ -133,10 +124,9 @@ def main():
             cv2.putText(frame, f"Frame: {frame_count}", (10, 90), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
             
-            # Show the frame
+            # Show the frame in fullscreen
             cv2.imshow('Traffic Density Monitor', frame)
             
-            # Exit on 'q' key press
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
                 
@@ -145,7 +135,6 @@ def main():
     except Exception as e:
         print(f"Error in main loop: {e}")
     finally:
-        # Clean up
         cap.release()
         cv2.destroyAllWindows()
         print("Process completed")
