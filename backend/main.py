@@ -23,16 +23,25 @@ def main():
         return
     
     # Video setup
-    video_path = 'C:/Users/Piyush/Desktop/Personal Work/DEKHO/backend/data/test1.mp4'
-    print(f"Opening video: {video_path}")
+    # video_path = 'C:/Users/Piyush/Desktop/Personal Work/DEKHO/backend/data/test1.mp4'
+    # print(f"Opening video: {video_path}")
     
-    if not os.path.exists(video_path):
-        print("Error: Video file does not exist")
-        return
+    # if not os.path.exists(video_path):
+    #     print("Error: Video file does not exist")
+    #     return
     
-    cap = cv2.VideoCapture(video_path)
+    # cap = cv2.VideoCapture(video_path)
+    # if not cap.isOpened():
+    #     print("Error: Could not open video")
+    #     return
+
+    # Webcam setup
+    webcam_index = 1  # Use 0 for the default webcam; change if needed (e.g., 1 for a second camera)
+    print(f"Opening webcam with index: {webcam_index}")
+    
+    cap = cv2.VideoCapture(webcam_index)
     if not cap.isOpened():
-        print("Error: Could not open video")
+        print("Error: Could not open webcam")
         return
     
     # Get the first frame to set up ROI
