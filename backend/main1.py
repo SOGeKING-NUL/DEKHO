@@ -90,6 +90,8 @@ def draw_traffic_lights(frame, phase):
     ew_color = (0, 255, 0) if phase in [1, 2] else (0, 0, 255)  # Green for EW, Red for NS
     cv2.circle(frame, (700, 300), 20, ew_color, -1)  # East-West light (right)
 
+
+
 def main(source=1):
     """
     Main function to process external webcam input, detect vehicles, calculate density, and display results.
