@@ -19,16 +19,20 @@ class WebcamVideoProcessor:
             raise RuntimeError(f"Could not open {'external webcam' if source == 1 else 'video file'}")
 
         # Load YOLOv8n model for vehicle detection
-        self.model = YOLO('yolov8x.pt')  # Pre-trained YOLOv8 Nano model
+        self.model = YOLO('yolov8n.pt')  # Pre-trained YOLOv8 Nano model
         self.class_names = self.model.names
-        self.vehicle_classes = [2, 3, 5, 7]  # car, motorcycle, bus, truck (YOLOv8 class IDs)
+        # Expand vehicle classes to include more types (e.g., bicycles, trucks, etc.)
+        self.vehicle_classes = [0, 1, 2, 3, 5, 7]  # person, bicycle, car, motorcycle, bus, truck
 
     def detect_vehicles(self, frame):
         """
-        Detect vehicles using YOLOv8n and return detections in [x1, y1, x2, y2, track_id] format.
+        Detect vehicles using YOLOv8n with improved settings and return detections in [x1, y1, x2, y2, track_id] format.
         """
-        # Perform inference
-        results = self.model(frame, conf=0.5)  # Confidence threshold 0.5
+        # Preprocess frame for better detection (adjust brightness/contrast if needed)
+        frame = cv2.convertScaleAbs(frame, alpha=1.2, beta=10)  # Increase brightness and contrast slightly
+
+        # Perform inference with lower confidence threshold and higher image quality
+        results = self.model(frame, conf=0.3, iou=0.7)  # Lower confidence (0.3), higher IoU (0.7) for small objects
         detections = []
         track_id_counter = 0  # Simple tracking (can be enhanced with DeepSORT for persistent IDs)
 
@@ -39,8 +43,8 @@ class WebcamVideoProcessor:
                 conf = box.conf[0].item()
                 cls = int(box.cls[0].item())
 
-                # Check if the detected object is a vehicle
-                if cls in self.vehicle_classes and conf > 0.5:
+                # Check if the detected object is a vehicle or related object
+                if cls in self.vehicle_classes and conf > 0.3:
                     # Ensure detections fit within frame to avoid out-of-bounds errors
                     x1 = max(0, min(x1, self.frame_width - 1))
                     y1 = max(0, min(y1, self.frame_height - 1))
@@ -51,6 +55,11 @@ class WebcamVideoProcessor:
                     track_id = track_id_counter
                     track_id_counter += 1
                     detections.append([x1, y1, x2, y2, track_id])
+
+                    # Optional: Draw bounding boxes for debugging (remove in final version)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame, f"{self.class_names[cls]} {conf:.2f}", (x1, y1-10),
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
         return np.array(detections) if detections else np.array([])
 
@@ -117,36 +126,43 @@ def main(source=1):
             frame = area_counter.draw_visualization(frame)
             draw_traffic_lights(frame, phase)
             
-            # Display metrics (phase, vehicles, and lane-wise densities)
+            # Display improved metrics (phase, vehicles, and lane-wise densities)
             metrics = [
                 f"Phase {phase}: {phase_time:.1f}s",
                 f"Vehicles: {len(detections)}"
             ]
             
-            text_color = (255, 255, 255)
-            bg_color = (0, 0, 0, 100)
+            # Enhanced text display with better background and formatting
+            text_color = (255, 255, 255)  # White text
+            bg_color = (0, 0, 0, 150)     # Darker black background with higher opacity
             font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.8
+            font_scale = 1.0              # Larger font for better readability
             thickness = 2
             
+            # Calculate text sizes for background box
             max_width = 0
             total_height = 0
             for text in metrics:
                 (text_w, text_h), _ = cv2.getTextSize(text, font, font_scale, thickness)
                 max_width = max(max_width, text_w)
-                total_height += text_h + 10
+                total_height += text_h + 15  # Increased spacing for readability
             
             x, y = 10, 10
-            box_w, box_h = max_width + 20, total_height + 10
+            box_w, box_h = max_width + 30, total_height + 20  # Larger padding for better contrast
             
+            # Draw semi-transparent background box
             overlay = frame.copy()
             cv2.rectangle(overlay, (x, y), (x + box_w, y + box_h), (0, 0, 0), -1)
-            cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
+            cv2.addWeighted(overlay, 0.8, frame, 0.2, 0, frame)  # Higher opacity for better contrast
             
-            y_pos = 20
-            for text in metrics:
-                cv2.putText(frame, text, (x + 10, y_pos), font, font_scale, text_color, thickness)
-                y_pos += 30
+            # Draw metrics with improved positioning
+            y_pos = 30
+            for text in metrics + [f"North: {densities['north']:.1f}%", 
+                                 f"South: {densities['south']:.1f}%", 
+                                 f"East: {densities['east']:.1f}%", 
+                                 f"West: {densities['west']:.1f}%"]:
+                cv2.putText(frame, text, (x + 15, y_pos), font, font_scale, text_color, thickness)
+                y_pos += 40  # Larger spacing for lane densities
 
             cv2.imshow(f'Traffic Monitoring from External Webcam', frame)
             frame_count += 1
