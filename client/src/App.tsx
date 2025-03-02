@@ -22,7 +22,7 @@ export default function DekhoLanding() {
   }, [isModalOpen]);
 
   // Video file names in the videos folder
-  const videoFiles = ["model1.mp4", "model2.mp4"];
+  const videoFiles = ["model1.mp4", "model2.mp4", "model3.mp4", "model4.mp4"];
 
   return (
     <div
@@ -70,15 +70,16 @@ export default function DekhoLanding() {
         </motion.button>
       </section>
 
+      {/* MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <motion.div
             ref={modalRef}
-            className="bg-white text-gray-900 p-6 rounded-2xl shadow-lg max-w-3xl w-full backdrop-blur-md bg-opacity-90"
-            initial={{ opacity: 0, scale: 0.5 }} // Start smaller
-            animate={{ opacity: 1, scale: 1 }} // Expand to full size
-            exit={{ opacity: 0, scale: 0.5 }} // Shrink when closing
-            transition={{ type: "spring", stiffness: 100, damping: 20 }} // Spring animation
+            className="bg-white text-gray-900 p-6 rounded-2xl shadow-lg max-w-4xl w-full backdrop-blur-md bg-opacity-90"
+            initial={{ opacity: 0, scale: 0.5 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            exit={{ opacity: 0, scale: 0.5 }} 
+            transition={{ type: "spring", stiffness: 100, damping: 20 }}
           >
             <div className="flex justify-between items-center border-b pb-2">
               <h2 className="text-xl font-bold">Explore DEKHO in Action</h2>
@@ -89,22 +90,26 @@ export default function DekhoLanding() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-6">
+            
+            {/* Video Grid Layout */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
               {videoFiles.map((video, index) => (
-                <video 
-                  key={index} 
-                  className="w-full max-w-4xl mx-auto rounded-lg shadow-lg" 
-                  controls
-                >
-                  <source src={`/videos/${video}`} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+                <div key={index} className="w-full flex justify-center">
+                  <video
+                    className="w-full max-w-md rounded-lg shadow-lg aspect-video"
+                    controls
+                  >
+                    <source src={`/videos/${video}`} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
               ))}
             </div>
           </motion.div>
         </div>
       )}
 
+      {/* Key Features Section */}
       <section className="p-10">
         <h2 className="text-4xl font-bold text-center text-blue-400">Key Features</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
@@ -141,7 +146,7 @@ export default function DekhoLanding() {
         </div>
       </section>
 
-      {/* Footer with "Made with ❤️ by Team-UNIT-13" */}
+      {/* Footer */}
       <footer className="text-center py-6 text-sm text-gray-400 dark:text-gray-500">
         Made with ❤️ by Team UNIT-13
       </footer>
