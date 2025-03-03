@@ -123,6 +123,7 @@ def draw_traffic_lights(frame, phase):
     ew_color = (0, 255, 0) if phase in [1, 2] else (0, 0, 255)
     cv2.circle(frame, (700, 300), 20, ew_color, -1)
 
+
 def main():
     print("Initializing traffic simulation...")
     simulator = TrafficSimulator()
