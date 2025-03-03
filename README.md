@@ -20,7 +20,6 @@ The **Intelligent Traffic Signal Control System** (DEKHO) aims to optimize urban
 | **Backend**       | FastAPI                     |
 | **ML Model**      | YOLOv8                      |
 | **Database**      | Firestore                   |
-| **Blockchain**    | Polygon (for decentralized control) |
 | **Networking**    | WebSockets                  |
 
 ## 🚀 Installation & Setup
