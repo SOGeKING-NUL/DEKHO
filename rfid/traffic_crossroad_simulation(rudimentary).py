@@ -1,9 +1,10 @@
 import tkinter as tk
+import random
 
 # Global variables:
-countdown = 15
+countdown = random.randint(12, 15)  # Initial countdown is random between 12-15 seconds
 active_light_index = 0
-ambulance_priority = False      # True when priority is queued
+ambulance_priority = False     
 in_priority_cycle = False       # True when the ambulance is currently in its forced cycle
 next_normal_index = None        # Stores the normal next index when ambulance priority is queued
 
@@ -42,9 +43,7 @@ class TrafficLight:
         self.canvas.itemconfig(self.green_light, fill="gray")
 
 def update_timer():
-    """Updates the countdown timer. When it reaches 0, the current light is turned off.
-    If an ambulance priority is queued, the ambulance is activated for its cycle,
-    and then the cycle resumes with the originally scheduled next light."""
+    """Updates the countdown timer with dynamic timing based on the active light."""
     global countdown, active_light_index, ambulance_priority, in_priority_cycle, next_normal_index
     timer_label.config(text=f"Time remaining: {countdown} seconds")
     
@@ -60,19 +59,28 @@ def update_timer():
             active_light_index = next_normal_index
             next_normal_index = None
             in_priority_cycle = False
+            # Set random countdown for normal operation
+            countdown = random.randint(12, 15)
         # Otherwise, if ambulance priority was queued, switch to ambulance.
         elif ambulance_priority:
             next_normal_index = (active_light_index + 1) % len(traffic_lights)
             active_light_index = 2  # Ambulance is at index 2.
             ambulance_priority = False
             in_priority_cycle = True
+            # Set extended countdown for ambulance
+            countdown = 25
         else:
             # Normal cycle: simply advance to the next light.
             active_light_index = (active_light_index + 1) % len(traffic_lights)
+            
+            # Set countdown based on whether this is the ambulance light or not
+            if active_light_index == 2:  # Ambulance light
+                countdown = 25
+            else:
+                countdown = random.randint(12, 15)
         
         # Turn on the new active light.
         traffic_lights[active_light_index].set_green()
-        countdown = 15
         root.after(1000, update_timer)
 
 def priority_handler(event):
@@ -97,7 +105,7 @@ title_label = tk.Label(root, text="Traffic Lights", font=("Helvetica", 24, "bold
 title_label.pack(pady=(20, 10))
 
 # Timer label.
-timer_label = tk.Label(root, text="Time remaining: 15 seconds", font=("Helvetica", 16),
+timer_label = tk.Label(root, text=f"Time remaining: {countdown} seconds", font=("Helvetica", 16),
                        bg="#2E3440", fg="#ECEFF4")
 timer_label.pack(pady=(10, 5))
 
