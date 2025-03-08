@@ -55,6 +55,9 @@ noOfBikes = 0
 noOfBuses =0
 noOfTrucks = 0
 noOfRickshaws = 0
+ambulanceTime = 0
+fireVanTime = 0
+policeTime = 0
 noOfLanes = 2
 
 # Red signal time at which cars will be detected at a signal
@@ -63,10 +66,21 @@ detectionTime = 5
 speeds = {'car':2.25, 'bus':1.8, 'truck':1.8, 'rickshaw':2, 'bike':2.5, 'ambulance':2.5, 'fireVan':2, 'police':2.25}  # average speeds of vehicles
 
 # Coordinates of start
-x = {'right':[0,0,0], 'down':[755,727,697], 'left':[1400,1400,1400], 'up':[602,627,657]}    
-y = {'right':[348,370,398], 'down':[0,0,0], 'left':[498,466,436], 'up':[800,800,800]}
+x = {'right':[0,0,0], 
+    'down':[755,727,697], 
+    'left':[1400,1400,1400], 
+    'up':[602,627,657]}    
 
-vehicles = {'right': {0:[], 1:[], 2:[], 'crossed':0}, 'down': {0:[], 1:[], 2:[], 'crossed':0}, 'left': {0:[], 1:[], 2:[], 'crossed':0}, 'up': {0:[], 1:[], 2:[], 'crossed':0}}
+y = {'right':[348,370,398], 
+    'down':[0,0,0],
+    'left':[498,466,436], 
+    'up':[800,800,800]}
+
+vehicles = {'right': {0:[], 1:[], 2:[], 'crossed':0}, 
+            'down': {0:[], 1:[], 2:[], 'crossed':0}, 
+            'left': {0:[], 1:[], 2:[], 'crossed':0}, 
+            'up': {0:[], 1:[], 2:[], 'crossed':0}}
+
 vehicleTypes = {
     0:'car', 
     1:'bus', 
@@ -77,7 +91,10 @@ vehicleTypes = {
     6:'fireVan',      
     7:'police'
 }
-directionNumbers = {0:'right', 1:'down', 2:'left', 3:'up'}
+directionNumbers = {0:'right', 
+                    1:'down', 
+                    2:'left', 
+                    3:'up'}
 
 # Coordinates of signal image, timer, and vehicle count
 signalCoods = [(530,230),(810,230),(810,570),(530,570)]
@@ -85,7 +102,7 @@ signalTimerCoods = [(530,210),(810,210),(810,550),(530,550)]
 vehicleCountCoods = [(480,210),(880,210),(880,550),(480,550)]
 vehicleCountTexts = ["0", "0", "0", "0"]
 
-# Coordinates of stop lines
+# Coordinates of stop lines (red light pr jhn gadio ko rukna hai)
 stopLines = {'right': 590, 'down': 330, 'left': 800, 'up': 535}
 defaultStop = {'right': 580, 'down': 320, 'left': 810, 'up': 545}
 stops = {'right': [580,580,580], 'down': [320,320,320], 'left': [810,810,810], 'up': [545,545,545]}
